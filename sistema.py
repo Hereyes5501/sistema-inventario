@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ------------------ CONFIG ------------------
-st.set_page_config(page_title="Sistema de Inventario", layout="wide")
+st.set_page_config(page_title="Stock ProControl", layout="wide")
 
 # ------------------ FUNCION CLAVE ------------------
 def recalcular_inventario():
@@ -27,7 +27,7 @@ def recalcular_inventario():
     st.session_state["inventario"] = inv
 
 # ------------------ HEADER ------------------
-st.title("📦 Sistema de Inventario")
+st.title("📦 Stock ProControl")
 
 # ------------------ USUARIOS ------------------
 usuarios = {
@@ -40,10 +40,10 @@ if "login" not in st.session_state:
     st.session_state["login"] = False
 
 if not st.session_state["login"]:
-    st.subheader("Login")
+    st.subheader("🔐 Iniciar sesión")
 
-    user = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
+    user = st.text_input("👤 Usuario")
+    password = st.text_input("🔑 Contraseña", type="password")
 
     if st.button("Entrar"):
         if user in usuarios and usuarios[user]["password"] == password:
@@ -59,7 +59,6 @@ if not st.session_state["login"]:
 # ------------------ SIDEBAR ------------------
 st.sidebar.write(f"👤 Usuario: {st.session_state['usuario']}")
 
-# 🔓 Cerrar sesión (sin borrar datos)
 if st.sidebar.button("🔓 Cerrar sesión"):
     st.session_state["login"] = False
     st.session_state.pop("usuario", None)
@@ -76,16 +75,20 @@ if "movimientos" not in st.session_state:
         "Proveedor", "Destino", "Sucursal"
     ])
 
-# ------------------ MENU ------------------
-menu = st.sidebar.selectbox("Menú", ["Dashboard", "Entradas", "Salidas", "Reportes"])
-
-# ------------------ LISTAS ------------------
+# 🔥 NUEVO: estado de pedidos
 proveedores = [
     "Murgati","Gema","Harina","Pealpan","Alim. Cargo","Cajas","La güera",
     "Sigma","Manolo","El Ingrato","3B","Abastos","Jam’s","Gas",
     "La Costeña","Queso y Jamón","Chorizo"
 ]
 
+if "pedidos" not in st.session_state:
+    st.session_state["pedidos"] = {p: False for p in proveedores}
+
+# ------------------ MENU ------------------
+menu = st.sidebar.selectbox("Menú", ["Dashboard", "Entradas", "Salidas", "Pedidos", "Reportes"])
+
+# ------------------ FRANQUICIAS ------------------
 franquicias = {
     "Lukarios Pizza": ["Salk", "Topacio", "Cactus", "Los Pinos"],
     "Blue Pizzas": ["Pozos", "Santa María del Río", "Centro", "Paseo"],
@@ -104,7 +107,6 @@ if menu == "Dashboard":
     else:
         st.dataframe(df, use_container_width=True)
 
-    # ALERTAS
     st.subheader("⚠️ Alertas de escasez")
     bajos = df[df["Cantidad"] < 10]
 
@@ -114,7 +116,6 @@ if menu == "Dashboard":
     else:
         st.success("Inventario en buen estado")
 
-    # GRAFICA
     st.subheader("📊 Stock real por producto")
     if not df.empty:
         df_ordenado = df.sort_values(by="Cantidad", ascending=False)
@@ -187,6 +188,31 @@ elif menu == "Salidas":
     st.subheader("Historial de Salidas")
     df = st.session_state["movimientos"]
     st.dataframe(df[df["Tipo"] == "Salida"].fillna("N/A"), use_container_width=True)
+
+# ------------------ PEDIDOS ------------------
+elif menu == "Pedidos":
+    st.subheader("📦 Pedidos a los proveedores")
+
+    st.write("Marca los proveedores a los que ya se les hizo pedido:")
+
+    for proveedor in proveedores:
+        st.session_state["pedidos"][proveedor] = st.checkbox(
+            proveedor,
+            value=st.session_state["pedidos"][proveedor]
+        )
+
+    if st.button("💾 Guardar pedidos"):
+        st.success("Pedidos actualizados correctamente")
+
+    st.subheader("📋 Estado de pedidos")
+
+    hechos = [p for p, v in st.session_state["pedidos"].items() if v]
+
+    if hechos:
+        st.write("✅ Pedidos realizados a:")
+        st.write(hechos)
+    else:
+        st.info("No se ha realizado ningún pedido")
 
 # ------------------ REPORTES ------------------
 elif menu == "Reportes":
